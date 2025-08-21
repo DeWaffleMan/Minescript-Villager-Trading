@@ -4,11 +4,13 @@ import sys
 Minecraft = JavaClass("net.minecraft.client.Minecraft")
 SlotAction = JavaClass("net.minecraft.world.inventory.ClickType")
 SelectMerchantTradePacket = JavaClass("net.minecraft.network.protocol.game.ServerboundSelectTradePacket")
+ClickButtonPacket = JavaClass("net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket")
 ItemStack = JavaClass("net.minecraft.world.item.ItemStack")
 Math = JavaClass("java.lang.Math")
 Exception = JavaClass("java.lang.Exception")
 IllegalArgumentException = JavaClass("java.lang.IllegalArgumentException")
 OutOfBoundsException = JavaClass("java.lang.ArrayIndexOutOfBoundsException")
+ArrayList = JavaClass("java.util.ArrayList")
 
 mc = Minecraft.getInstance()
 
@@ -82,12 +84,15 @@ def check_for_space(offer) -> bool:
     """
     Checks if the player has enough space in the inventory to trade.
     If the inventory is full, but the trade will free up an inventory slot, still return True
+    Assumes a merchant screen is open
     
     Args:
         offer (JavaObject("net.minecraft.world.item.trading.MerchantOffer") (class_1914)): Trade offer, can have one or two valid item costs
     Returns:
         bool: Does the player have space for the offer's sell item if they traded with it?
     """
+    player = mc.player
+
     stack_to_insert = offer.getResult()
     buy1 = offer.getBaseCostA()
     buy2 = offer.getItemCostB() # Start as a java.util.Optional<ItemStack> or Optiona.empty if there's only one buy item
@@ -95,8 +100,6 @@ def check_for_space(offer) -> bool:
         buy2 = buy2.get().itemStack() # Turn into an ItemStack if there are 2 buy items
     else:
         buy2 = None
-
-    player = mc.player
     inv = player.getInventory()
     remaining = stack_to_insert.getCount()
     insert_item = stack_to_insert.getItem()
@@ -110,12 +113,12 @@ def check_for_space(offer) -> bool:
         buy2_expect = buy2.getCount()
         buy2_count = 0
 
-    for i in range(inv.INVENTORY_SIZE):
+    for i in range(inv.MAIN_SIZE): # 0,1 = buy slots   2 = sell slot   3+ = inventory
 
-        inv.getItem(i)
-        slot_stack = inv.getItem(i)
+        
+        slot_stack = inv.getStack(i)
         count = slot_stack.getCount()
-        if slot_stack.isEmpty(): # If there's an empty slot there must be space
+        if slot_stack.isEmpty() and i > 2: # If there's an empty slot there must be space
             return True
 
         if slot_stack.method_31574(insert_item): # Can't use "is" because python doesn't count it as a statement
@@ -170,9 +173,92 @@ def can_trade(offer) -> bool:
     else:
         return False
 
+def choose_and_empty_offer(offer_index):
+    handler = mc.screen.getMenu()
+    network_handler = mc.player.connection
+    packet = SelectMerchantTradePacket(offer_index)
+
+    network_handler.method_52787(packet)
+
+    mc.gameMode.handleInventoryMouseClick(
+        handler.field_7763,        # field_7763 is syncId
+        0,                     
+        0,                     
+        SlotAction.QUICK_MOVE,     # Normal click
+        mc.player)
+    mc.gameMode.handleInventoryMouseClick(
+        handler.field_7763,        # field_7763 is syncId
+        1,                     
+        0,                     
+        SlotAction.QUICK_MOVE,     # Normal click
+        mc.player)
+
+def input_amount_at_slot(required_stack,slot_index_target):
+    handler = mc.screen.getMenu()
+    player = mc.player
+    required_item = required_stack.getItem()
+    required_amount = required_stack.getCount()
     
+    
+    slots = []
+    for i in range(handler.slots.size()):
+        
+        stack = handler.getSlot(i).getItem()
+        if stack.method_31574(required_item):
+            slots.append((i,stack)) 
 
+    for i in range(len(slots)): 
+        max_index = i
+        for j in range(i + 1, len(slots)):
+            if slots[j][1].getCount() < slots[max_index][1].getCount():
+                max_index = j
+        # Swap
+        temp = slots[i]
+        slots[i] = slots[max_index]
+        slots[max_index] = temp
 
+    
+    print(slots)
+    for index,stack in slots:
+        amount = stack.getCount()
+        mc.gameMode.handleInventoryMouseClick(
+            handler.field_7763,    # field_7763 is syncId
+            index,                     
+            0,                     # left mouse button = 0
+            SlotAction.PICKUP,     # Normal click
+            player)
+        
+        print(amount, required_amount)
+        if amount > required_amount:
+            iterations = required_amount
+            print("more")
+        else:
+            iterations = amount
+            print('less')
+        print(iterations)
+        for _ in range(iterations):
+            mc.gameMode.handleInventoryMouseClick(
+                handler.field_7763,    # field_7763 is syncId
+                slot_index_target,                     
+                1,                     # right mouse button = 1
+                SlotAction.PICKUP,     # Normal click
+                player)
+   
+        required_amount -= iterations
+        if required_amount <= 0:
+            print("break", index)
+            mc.gameMode.handleInventoryMouseClick(
+                handler.field_7763,    # field_7763 is syncId
+                index,                     
+                0,                     # left mouse button = 0
+                SlotAction.PICKUP,     # Normal click
+                player)  
+            break
+
+    
+def input_items(offer):
+    pass
+        
 def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
     """
     Will trade with the current villager until
@@ -180,7 +266,6 @@ def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
     b. Not enough space in the inventory to put the sold item
     c. Trade got disabled/Ran out of trade uses (The red X on the arrow)
     
-    Assumes a MerchantMenu is already open
 
     Args:
         offer_index (int|None): None by default, the number of the trade offer from top to bottom (starts at 0)
@@ -215,33 +300,38 @@ def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
         raise OutOfBoundsException("Trade index is out of bounds of offer list")
     offer = offers.get(offer_index)
 
+    choose_and_empty_offer(offer_index)
+    #input_amount_at_slot(offer.getBaseCostA(), 0)
 
-    maxUses = offer.getMaxUses()
-    uses = int(offer.getUses() / maxUses) # Can't use // because Java treats it as a comment 
-    while True:
-        offer = handler.getOffers().get(offer_index)
+    # maxUses = offer.getMaxUses()
+    # uses = int(offer.getUses() / maxUses) # Can't use // because Java treats it as a comment 
+    # while True:
+    #     offer = handler.getOffers().get(offer_index)
   
-        if uses >= maxUses:
-            if print_exit_messages:
-                print("Trade got disabled!")
-            break
+    #     if uses >= maxUses:
+    #         if print_exit_messages:
+    #             print("Trade got disabled!")
+    #         break
 
-        if not can_trade(offer):
-            if print_exit_messages:
-                print("Ran out of items!")
-            break
+    #     if not can_trade(offer):
+    #         if print_exit_messages:
+    #             print("Ran out of items!")
+    #         break
 
-        if not check_for_space(offer): # Assumes that player has enough to trade
-            if print_exit_messages:
-                print("Not enough space in inventory!")
-            break
+    #     if not check_for_space(offer): # Assumes that player has enough to trade
+    #         if print_exit_messages:
+    #             print("Not enough space in inventory!")
+    #         break
 
-        network_handler.method_52787(SelectMerchantTradePacket(offer_index)) # method_52787 is sendPacket
+    #     network_handler.method_52787(SelectMerchantTradePacket(offer_index)) # method_52787 is sendPacket
 
-        mc.gameMode.handleInventoryMouseClick(
-            handler.field_7763,    # field_7763 is syncId
-            2,                     # slot 2 is the slot with the sold item
-            0,                     # left mouse button = 0
-            SlotAction.QUICK_MOVE, # AKA shift-click
-            player)
-        uses += 1
+    #     mc.gameMode.handleInventoryMouseClick(
+    #         handler.field_7763,    # field_7763 is syncId
+    #         2,                     # slot 2 is the slot with the sold item
+    #         0,                     # left mouse button = 0
+    #         SlotAction.QUICK_MOVE, # AKA shift-click
+    #         player)
+    #     uses += 1
+
+look_at_villager()
+m.set_timeout(trade_loop, 400)
