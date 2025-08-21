@@ -274,7 +274,61 @@ def input_amount_at_slot(required_stack,slot_index_target:int):
                 SlotAction.PICKUP,     # Normal click
                 player)  
             break
-        
+def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
+    """
+    Trades with the offer one time. Will return early if one of these conditions are met:
+    a. Trade got disabled/ran out of uses (red X on offer arrow)
+    b. Ran out of items to trade with
+    c. Ran out of inventory space
+
+    Notice: Does NOT select the trade before hand, to avoid needless calls. Use choose_and_empty_offer first.
+
+    Args:
+        offer_index (int): The index (starts at 0, top to bottom) of the trade offer to be traded with
+        print_exit_messages (bool): True by default, if True print according messages when function returns early
+    Returns:
+        bool: True if traded successfully, False if met one of the conditions above
+    Raises:
+        IllegalArgumentException: offer_index is out of bounds of the offer list
+        NullPointerException: No merchantMenu is open
+    """
+    handler = mc.screen.getMenu()
+    if handler is None:
+        raise NullPointerException("Villager Menu not found")
+    offers = handler.getOffers()
+    if offer_index > offers.size() or offer_index < 0:
+        raise IllegalArgumentException(f"offer_index must be a positive Integer (got {offer_index})")
+    
+    offer = offers.get(offer_index)
+    maxUses = offer.getMaxUses()
+    uses = offer.getUses()%maxUses
+
+    if uses >= maxUses:
+        if print_exit_messages:
+            print("Trade got disabled!")
+        return False
+    if not can_trade(offer):
+        if print_exit_messages:
+            print("Ran out of items!")
+        return False
+    if not check_for_space(offer):
+        if print_exit_messages:
+            print("Ran out of inventory space!")
+        return False
+    
+    input_amount_at_slot(offer.getBaseCostA(),0)
+    if not offer.getItemCostB().isEmpty():
+        input_amount_at_slot(offer.getItemCostB(),1)
+    mc.gameMode.handleInventoryMouseClick(
+        handler.containerId ,    # containerId  is syncId
+        2,                     
+        0,                    
+        SlotAction.QUICK_MOVE,     # Normal click
+        mc.player)
+    return True
+
+
+
 def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
     """
     Will trade with the current villager until
@@ -351,4 +405,5 @@ def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
 
 look_at_villager()
 m.set_timeout(trade_loop, 400)
+
 
