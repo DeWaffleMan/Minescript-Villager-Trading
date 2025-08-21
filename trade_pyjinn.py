@@ -173,27 +173,43 @@ def can_trade(offer) -> bool:
     else:
         return False
 
-def choose_and_empty_offer(offer_index):
+def choose_and_empty_offer(offer_index:int):
+    """
+    Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item.
+    
+    Args:
+        offer_index (int): Index (starts from 0, top to bottom) of the trade offer 
+
+    """
     handler = mc.screen.getMenu()
     network_handler = mc.player.connection
     packet = SelectMerchantTradePacket(offer_index)
 
-    network_handler.method_52787(packet)
-
+    network_handler.send(packet)
+    handler.method_20215(offer_index)
     mc.gameMode.handleInventoryMouseClick(
-        handler.field_7763,        # field_7763 is syncId
+        handler.containerId ,        # containerId  is syncId
         0,                     
         0,                     
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
     mc.gameMode.handleInventoryMouseClick(
-        handler.field_7763,        # field_7763 is syncId
+        handler.containerId ,        # containerId  is syncId
         1,                     
         0,                     
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
 
-def input_amount_at_slot(required_stack,slot_index_target):
+def input_amount_at_slot(required_stack,slot_index_target:int):
+    """
+    Looks for an amount of items in inventory, then inputs that exact amount into a slot in the ScreenHandler.
+
+    Args:
+        required_stack (JavaObject("net.minecraft.world.item.ItemStack")): Stack needed to be on slot number slot_index_target
+        slot_index_target (int): Index of slot you need to have required_stack
+    """
+
+
     handler = mc.screen.getMenu()
     player = mc.player
     required_item = required_stack.getItem()
@@ -201,8 +217,8 @@ def input_amount_at_slot(required_stack,slot_index_target):
     
     
     slots = []
-    for i in range(handler.slots.size()):
-        
+    
+    for i in range(handler.slots.size()):  
         stack = handler.getSlot(i).getItem()
         if stack.method_31574(required_item):
             slots.append((i,stack)) 
@@ -217,47 +233,47 @@ def input_amount_at_slot(required_stack,slot_index_target):
         slots[i] = slots[max_index]
         slots[max_index] = temp
 
-    
-    print(slots)
+
     for index,stack in slots:
         amount = stack.getCount()
         mc.gameMode.handleInventoryMouseClick(
-            handler.field_7763,    # field_7763 is syncId
+            handler.containerId ,    # containerId  is syncId
             index,                     
             0,                     # left mouse button = 0
             SlotAction.PICKUP,     # Normal click
             player)
         
-        print(amount, required_amount)
-        if amount > required_amount:
+
+        amount_bigger = amount > required_amount
+        if amount_bigger:
             iterations = required_amount
-            print("more")
+            for _ in range(iterations):
+                
+                mc.gameMode.handleInventoryMouseClick(
+                    handler.containerId ,    # containerId  is syncId
+                    slot_index_target,                     
+                    1,                     # right mouse button = 1
+                    SlotAction.PICKUP,     # Normal click
+                    player)
+            required_amount -= iterations
         else:
-            iterations = amount
-            print('less')
-        print(iterations)
-        for _ in range(iterations):
             mc.gameMode.handleInventoryMouseClick(
-                handler.field_7763,    # field_7763 is syncId
+                handler.containerId ,    # containerId  is syncId
                 slot_index_target,                     
-                1,                     # right mouse button = 1
+                0,                    
                 SlotAction.PICKUP,     # Normal click
                 player)
-   
-        required_amount -= iterations
+            required_amount -= amount
+            
+        
         if required_amount <= 0:
-            print("break", index)
             mc.gameMode.handleInventoryMouseClick(
-                handler.field_7763,    # field_7763 is syncId
+                handler.containerId ,    # containerId  is syncId
                 index,                     
                 0,                     # left mouse button = 0
                 SlotAction.PICKUP,     # Normal click
                 player)  
             break
-
-    
-def input_items(offer):
-    pass
         
 def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
     """
@@ -335,3 +351,4 @@ def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
 
 look_at_villager()
 m.set_timeout(trade_loop, 400)
+
