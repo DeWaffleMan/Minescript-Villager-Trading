@@ -24,6 +24,23 @@ Before you start, make sure you have:
 - Import the module into your script (must end on `.pyj`):
 
 ---
+## Example Use
+Trade with a villager's first offer until the player can't trade anymore:
+```py
+from trade_pyjinn import trade_once,look_at_villager,choose_and_empty_offer
+import minescript as m
+look_at_villager()
+
+def main():
+    choose_and_empty_offer(0)
+
+    while True:
+        result = trade_once(0)
+        if not result:
+            break
+m.set_timeout(main,400)
+```
+---
 
 ## Methods
 
