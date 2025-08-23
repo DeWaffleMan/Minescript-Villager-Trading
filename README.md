@@ -29,7 +29,6 @@ Trade with a villager's first offer until the player can't trade anymore:
 ```py
 from trade_pyjinn import trade_once,look_at_villager,choose_and_empty_offer
 import minescript as m
-look_at_villager()
 
 def main():
     choose_and_empty_offer(0)
@@ -38,7 +37,9 @@ def main():
         result = trade_once(0)
         if not result:
             break
-m.set_timeout(main,400)
+
+look_at_villager()
+m.set_timeout(main, 400)
 ```
 ---
 
@@ -101,9 +102,9 @@ m.set_timeout(main,400)
  
 - **trade_once(offer_index: int, print_exit_messages:bool = True) -> bool**
 
-  Trades with the offer one time. Will return early if one of these conditions are met:
-    a. Trade got disabled/ran out of uses (red X on offer arrow)
-    b. Ran out of items to trade with
+  Trades with the offer one time. Will return early if one of these conditions are met:\
+    a. Trade got disabled/ran out of uses (red X on offer arrow)\
+    b. Ran out of items to trade with\
     c. Ran out of inventory space
 
   Notice: Does NOT select the trade before hand, to avoid needless calls. Use choose_and_empty_offer first.
