@@ -31,7 +31,7 @@ from trade_pyjinn import trade_once,look_at_villager,choose_and_empty_offer
 import minescript as m
 
 def main():
-    choose_and_empty_offer(0)
+    choose_offer(0)
 
     while True:
         result = trade_once(0)
@@ -87,7 +87,7 @@ m.set_timeout(main, 400)
   
   - **offer:** `MerchantOffer` - Trade offer, can have one or two valid item costs
 
-- **choose_and_empty_offer(offer_index: int)**
+- **choose_offer(offer_index: int)**
 
   Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item
   
