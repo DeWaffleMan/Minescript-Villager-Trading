@@ -1,6 +1,6 @@
 # Pyjinn Villager Trading
 
-**Authors:** DeWaffleMan, 4ndr3js, JulianIsLost\
+**Authors:** DeWaffleMan, 4ndr3js, JulianIsLost
 
 Library for performing villager related tasks in Minecraft using [Minescripts Pyjinn](https://minescript.net/pyjinn/).  
 This module should be imported by other scripts and not run directly.
