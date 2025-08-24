@@ -327,7 +327,30 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
         mc.player)
     return True
 
-
+def break_block_at(pos:list[int,int,int]) -> None:
+    """
+    Look at the block in pos and break it.
+    If block at pos is already broken (minecraft:air), return immediately
+    
+    Args:
+        pos (List[int,int,int]): Position of block
+    Raises:
+        IllegalStateException: Desired position is out of reach or something in the way
+    """
+    if "air" in m.getblock(*pos):
+        return
+    m.player_look_at(pos[0]+0.5,pos[1]+0.5,pos[2]+0.5)
+    targeted = m.player_get_targeted_block(4.5)
+    if not targeted:
+        raise IllegalStateException(f"Player can't reach {pos}")
+    targeted = targeted.position
+    if targeted != pos:
+        raise IllegalStateException(f"Block at position {targeted} is in the way between player and {pos}")
+    
+    m.player_press_attack(True)
+    while not "air" in m.getblock(*pos):
+        sleep(0.05)
+    m.player_press_attack(False)
 
 def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
     """
@@ -405,5 +428,6 @@ def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
 
 look_at_villager()
 m.set_timeout(trade_loop, 400)
+
 
 
