@@ -68,6 +68,15 @@ m.set_timeout(main, 400)
    look_at_villager()
    ```
 
+- **find_trade(item_stack: ItemStack) -> int**
+    
+  Checks if the villagers sells the item provided in item_stack.\
+  If yes, return the index of the trade, otherwise return -1.
+
+  - **item_stack:** `ItemStack` - `ItemStack` to check for in the trades
+
+  Note: [Here](https://github.com/JulianIsLost5/temp-minescript-scripts) you can find a Helperscript to create ItemStack instances
+
 - **player_has_enough(stack_required: ItemStack, player: LocalPlayer) -> bool**
 
   Checks if the items `stack_required` are present in the player's inventory
