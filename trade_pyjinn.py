@@ -25,7 +25,7 @@ def get_closest_villagers(radius:int) -> list[m.EntityData]:
     """
     return m.entities(type = "entity.minecraft.villager", max_distance = radius, sort = "nearest") 
 
-def look_at_villager(shift_before_clicking:bool = False, radius:int = 5) -> None:
+def look_and_click_villager(shift_before_clicking:bool = False, radius:int = 5) -> None:
     """
     Finds and makes the player look at the head of the closest villager to the player within (radius) blocks.
 
@@ -50,7 +50,25 @@ def look_at_villager(shift_before_clicking:bool = False, radius:int = 5) -> None
     if shift_before_clicking:
         m.player_press_sneak(False)
 
+def find_trade(item_stack) -> int:
+    """
+    Checks if the villagers sells the item provided in item_stack.
+    If yes, return the index of the trade, otherwise return -1.
 
+    Args:
+        item_stack (JavaObject("net.minecraft.world.item.ItemStack")): ItemStack to check for in the trades.
+    Returns:
+        int: Index of the trade that sells passed item
+    """
+    handler = mc.screen.getMenu()
+    offers = handler.getOffers()
+    for index in range(offers.size()):
+        offer = offers.get(index)
+        sell_item = offer.getResult()
+        if ItemStack.matches(item_stack, sell_item):
+            return index
+            
+    return -1
 
 def player_has_enough(stack_required,player) -> bool:
     """
@@ -80,6 +98,7 @@ def player_has_enough(stack_required,player) -> bool:
             if total >= need_count:
                 return True
     return False
+    
 def check_for_space(offer) -> bool:
     """
     Checks if the player has enough space in the inventory to trade.
@@ -173,7 +192,7 @@ def can_trade(offer) -> bool:
     else:
         return False
 
-def choose_and_empty_offer(offer_index:int):
+def choose_offer(offer_index:int):
     """
     Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item.
     
@@ -200,7 +219,7 @@ def choose_and_empty_offer(offer_index:int):
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
 
-def input_amount_at_slot(required_stack,slot_index_target:int):
+def input_amount_at_slot(required_stack, slot_index_target:int):
     """
     Looks for an amount of items in inventory, then inputs that exact amount into a slot in the ScreenHandler.
 
@@ -274,6 +293,7 @@ def input_amount_at_slot(required_stack,slot_index_target:int):
                 SlotAction.PICKUP,     # Normal click
                 player)  
             break
+        
 def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
     """
     Trades with the offer one time. Will return early if one of these conditions are met:
@@ -327,83 +347,5 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
         mc.player)
     return True
 
-
-
-def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
-    """
-    Will trade with the current villager until
-    a. Ran out of items to trade
-    b. Not enough space in the inventory to put the sold item
-    c. Trade got disabled/Ran out of trade uses (The red X on the arrow)
-    
-
-    Args:
-        offer_index (int|None): None by default, the number of the trade offer from top to bottom (starts at 0)
-                                If None, use the system argv
-        print_exit_messages (bool): True by default, if True print an corresponding message to reasons a,b,c when finished trading
-
-    Raises:
-        OutOfBoundsException:     offer_index is negative or too large
-        IllegalArgumentException: Got None for offer_index but no argv[1]
-        IllegalArgumentException: Got None for offer_index but argv[1] is not an integer 
-    """
-
-    
-    screen = mc.screen
-    handler = screen.getMenu()
-    field = handler.getClass().getDeclaredField("field_7863") # merchant
-    field.setAccessible(True)
-    merchant = field.get(handler)
-    offers = merchant.getOffers()
-
-    player = mc.player
-    network_handler = player.connection
-    if offer_index is None:
-        if len(sys.argv) == 1:
-            raise IllegalArgumentException(r"Add index of trade after script name (starts at 0) (e.g \trade 1)") # use raw string to avoid escape character error
-    
-        try:
-            offer_index = int(sys.argv[1])
-        except:
-            raise IllegalArgumentException("Trade index must be a positive integer")
-    if offers.size()-1 < offer_index or offer_index < 0:
-        raise OutOfBoundsException("Trade index is out of bounds of offer list")
-    offer = offers.get(offer_index)
-
-    choose_and_empty_offer(offer_index)
-    #input_amount_at_slot(offer.getBaseCostA(), 0)
-
-    # maxUses = offer.getMaxUses()
-    # uses = int(offer.getUses() / maxUses) # Can't use // because Java treats it as a comment 
-    # while True:
-    #     offer = handler.getOffers().get(offer_index)
-  
-    #     if uses >= maxUses:
-    #         if print_exit_messages:
-    #             print("Trade got disabled!")
-    #         break
-
-    #     if not can_trade(offer):
-    #         if print_exit_messages:
-    #             print("Ran out of items!")
-    #         break
-
-    #     if not check_for_space(offer): # Assumes that player has enough to trade
-    #         if print_exit_messages:
-    #             print("Not enough space in inventory!")
-    #         break
-
-    #     network_handler.method_52787(SelectMerchantTradePacket(offer_index)) # method_52787 is sendPacket
-
-    #     mc.gameMode.handleInventoryMouseClick(
-    #         handler.field_7763,    # field_7763 is syncId
-    #         2,                     # slot 2 is the slot with the sold item
-    #         0,                     # left mouse button = 0
-    #         SlotAction.QUICK_MOVE, # AKA shift-click
-    #         player)
-    #     uses += 1
-
-look_at_villager()
-m.set_timeout(trade_loop, 400)
 
 
