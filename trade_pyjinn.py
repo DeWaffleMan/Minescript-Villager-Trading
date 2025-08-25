@@ -52,7 +52,7 @@ def look_and_click_villager(shift_before_clicking:bool = False, radius:int = 5) 
 
 def find_trade(item_stack) -> int:
     """
-    Checks if the cillagers sells the item provided in item_stack.
+    Checks if the villagers sells the item provided in item_stack.
     If yws return the index of the trade, otherwise return -1.
 
     Args:
@@ -346,4 +346,5 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
     return True
+
 
