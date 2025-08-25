@@ -50,7 +50,25 @@ def look_and_click_villager(shift_before_clicking:bool = False, radius:int = 5) 
     if shift_before_clicking:
         m.player_press_sneak(False)
 
+def find_trade(item_stack) -> int:
+    """
+    Checks if the cillagers sells the item provided in item_stack.
+    If yws return the index of the trade, otherwise return -1.
 
+    Args:
+        item_stack (JavaObject("net.minecraft.world.item.ItemStack")): ItemStack to check for in the trades.
+    Returns:
+        int: Index of the trade that sells passed item
+    """
+    handler = mc.screen.getMenu()
+    offers = handler.getOffers()
+    for index in range(offers.size()):
+        offer = offers.get(index)
+        sell_item = offer.getResult()
+        if ItemStack.matches(item_stack, sell_item):
+            return index
+            
+    return -1
 
 def player_has_enough(stack_required,player) -> bool:
     """
@@ -328,3 +346,4 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
     return True
+
