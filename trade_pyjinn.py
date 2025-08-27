@@ -4,13 +4,15 @@ import sys
 Minecraft = JavaClass("net.minecraft.client.Minecraft")
 SlotAction = JavaClass("net.minecraft.world.inventory.ClickType")
 SelectMerchantTradePacket = JavaClass("net.minecraft.network.protocol.game.ServerboundSelectTradePacket")
-ClickButtonPacket = JavaClass("net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket")
 ItemStack = JavaClass("net.minecraft.world.item.ItemStack")
-Math = JavaClass("java.lang.Math")
-Exception = JavaClass("java.lang.Exception")
-IllegalArgumentException = JavaClass("java.lang.IllegalArgumentException")
+BlockPos = JavaClass("net.minecraft.core.BlockPos")
+Direction = JavaClass("net.minecraft.core.Direction")
+Item = JavaClass("net.minecraft.world.item.Item")
+
+IllegalStateException = JavaClass("java.lang.IllegalStateException")
+NullPointerException  = JavaClass("java.lang.NullPointerException")
 OutOfBoundsException = JavaClass("java.lang.ArrayIndexOutOfBoundsException")
-ArrayList = JavaClass("java.util.ArrayList")
+IllegalArgumentException = JavaClass("java.lang.IllegalArgumentException")
 
 mc = Minecraft.getInstance()
 
@@ -330,6 +332,9 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
 def block_state(pos):
     return mc.level.getBlockState(BlockPos(*pos))
 
+def get_block_name(pos):
+    return ("minecraft:"+block_state(pos).getBlock().getName().getString()).lower()
+
 def break_block_at(pos:list[int,int,int]) -> None:
     """
     Look at the block in pos and break it.
@@ -364,83 +369,45 @@ def break_block_at(pos:list[int,int,int]) -> None:
             mc.gameMode.continueDestroyBlock(blockpos,Direction.UP)
     x = m.add_event_listener("tick",mine)
 
-def trade_loop(offer_index:int|None = None, print_exit_messages = True) -> None:
-    """
-    Will trade with the current villager until
-    a. Ran out of items to trade
-    b. Not enough space in the inventory to put the sold item
-    c. Trade got disabled/Ran out of trade uses (The red X on the arrow)
+
+def nearest_job_block(radius=3):
+    job_blocks_found = []
+    smallest_distance = [999,None]
+
+    player_pos = mc.player.blockPosition()
+    px,py,pz = player_pos.getX(),player_pos.getY(),player_pos.getZ()
     
+    for x in range(-radius,radius+1):
+        
+        for y in range(-radius,radius+1):
+            for z in range(-radius,radius+1):
+                new = player_pos.offset(x,y,z)
+                new = [new.getX(), new.getY(), new.getZ()]
+                name = get_block_name(new)
+                
+                if name in job_blocks:
+                    if get_block_name(new) in job_blocks:
+                        job_blocks_found.append(new)
+                        dx,dy,dz = abs(px-new[0]),abs(py-new[1]),abs(pz-new[2])
+                        distance = (dx**3+dy**3+dz**3)
+                        if distance < smallest_distance[0]:
+                            
+                            smallest_distance[0] = distance
+                            smallest_distance[1] = new
+                            
+    return smallest_distance[1]
 
-    Args:
-        offer_index (int|None): None by default, the number of the trade offer from top to bottom (starts at 0)
-                                If None, use the system argv
-        print_exit_messages (bool): True by default, if True print an corresponding message to reasons a,b,c when finished trading
-
-    Raises:
-        OutOfBoundsException:     offer_index is negative or too large
-        IllegalArgumentException: Got None for offer_index but no argv[1]
-        IllegalArgumentException: Got None for offer_index but argv[1] is not an integer 
-    """
-
+def replace_job(pos):
+    inv = mc.player.getInventory()
+    job_name = get_block_name(pos)
+    stack = ItemStack(Item.byId(job_blocks.get(job_name)))
     
-    screen = mc.screen
-    handler = screen.getMenu()
-    field = handler.getClass().getDeclaredField("field_7863") # merchant
-    field.setAccessible(True)
-    merchant = field.get(handler)
-    offers = merchant.getOffers()
-
-    player = mc.player
-    network_handler = player.connection
-    if offer_index is None:
-        if len(sys.argv) == 1:
-            raise IllegalArgumentException(r"Add index of trade after script name (starts at 0) (e.g \trade 1)") # use raw string to avoid escape character error
+    wait_for_pickup = not inv.contains(stack)
     
-        try:
-            offer_index = int(sys.argv[1])
-        except:
-            raise IllegalArgumentException("Trade index must be a positive integer")
-    if offers.size()-1 < offer_index or offer_index < 0:
-        raise OutOfBoundsException("Trade index is out of bounds of offer list")
-    offer = offers.get(offer_index)
+    break_block_at(pos)
 
-    choose_and_empty_offer(offer_index)
-    #input_amount_at_slot(offer.getBaseCostA(), 0)
-
-    # maxUses = offer.getMaxUses()
-    # uses = int(offer.getUses() / maxUses) # Can't use // because Java treats it as a comment 
-    # while True:
-    #     offer = handler.getOffers().get(offer_index)
-  
-    #     if uses >= maxUses:
-    #         if print_exit_messages:
-    #             print("Trade got disabled!")
-    #         break
-
-    #     if not can_trade(offer):
-    #         if print_exit_messages:
-    #             print("Ran out of items!")
-    #         break
-
-    #     if not check_for_space(offer): # Assumes that player has enough to trade
-    #         if print_exit_messages:
-    #             print("Not enough space in inventory!")
-    #         break
-
-    #     network_handler.method_52787(SelectMerchantTradePacket(offer_index)) # method_52787 is sendPacket
-
-    #     mc.gameMode.handleInventoryMouseClick(
-    #         handler.field_7763,    # field_7763 is syncId
-    #         2,                     # slot 2 is the slot with the sold item
-    #         0,                     # left mouse button = 0
-    #         SlotAction.QUICK_MOVE, # AKA shift-click
-    #         player)
-    #     uses += 1
-
-look_at_villager()
-m.set_timeout(trade_loop, 400)
-
-
-
-
+    if wait_for_pickup:
+        x = None
+        def f(event):
+            if mc.player.getInventory().contains(stack):
+                pass # not done yet
