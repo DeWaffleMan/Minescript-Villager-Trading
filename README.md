@@ -75,7 +75,7 @@ m.set_timeout(main, 400)
 
   - **item_stack:** `ItemStack` - `ItemStack` to check for in the trades
 
-  Note: [Here](https://github.com/JulianIsLost5/temp-minescript-scripts) you can find a Helperscript to create ItemStack instances
+  Note: [Here](https://github.com/JulianIsLost5/minescript-scripts/tree/main/tools) you can find a Helperscript to create ItemStack instances
 
 - **player_has_enough(stack_required: ItemStack, player: LocalPlayer) -> bool**
 
