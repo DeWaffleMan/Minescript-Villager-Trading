@@ -108,7 +108,12 @@ m.set_timeout(main, 400)
 
   - **required_stack:** `ItemStack` - Stack needed to be on slot number slot_index_target
   - **slot_index_target:** `int` - Index of slot you need to have required_stack
- 
+
+- **choose_and_empty_offer(offer_index:int)**
+  Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item.
+    
+  - **offer_index**: `int` Index (starts from 0, top to bottom) of the trade offer
+   
 - **trade_once(offer_index: int, print_exit_messages:bool = True) -> bool**
 
   Trades with the offer one time. Will return early if one of these conditions are met:\

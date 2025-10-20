@@ -293,7 +293,33 @@ def input_amount_at_slot(required_stack, slot_index_target:int):
                 SlotAction.PICKUP,     # Normal click
                 player)  
             break
-        
+def choose_and_empty_offer(offer_index:int):
+    """
+    Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item.
+    
+    Args:
+        offer_index (int): Index (starts from 0, top to bottom) of the trade offer 
+
+    """
+    handler = mc.screen.getMenu()
+    network_handler = mc.player.connection
+    packet = SelectMerchantTradePacket(offer_index)
+
+    network_handler.send(packet)
+    handler.method_20215(offer_index)
+    mc.gameMode.handleInventoryMouseClick(
+        handler.containerId ,        # containerId  is syncId
+        0,                     
+        0,                     
+        SlotAction.QUICK_MOVE,     # Normal click
+        mc.player)
+    mc.gameMode.handleInventoryMouseClick(
+        handler.containerId ,        # containerId  is syncId
+        1,                     
+        0,                     
+        SlotAction.QUICK_MOVE,     # Normal click
+        mc.player)
+    
 def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
     """
     Trades with the offer one time. Will return early if one of these conditions are met:
@@ -346,6 +372,7 @@ def trade_once(offer_index:int, print_exit_messages:bool = True) -> bool:
         SlotAction.QUICK_MOVE,     # Normal click
         mc.player)
     return True
+
 
 
 
