@@ -112,7 +112,7 @@ m.set_timeout(main, 400)
 - **choose_and_empty_offer(offer_index:int)**
   Chooses a villager offer without inputing items. Useful when there are multiple offers that require the same type of item.
     
-  -**offer_index**: `int` Index (starts from 0, top to bottom) of the trade offer
+  - **offer_index**: `int` Index (starts from 0, top to bottom) of the trade offer
    
 - **trade_once(offer_index: int, print_exit_messages:bool = True) -> bool**
 
